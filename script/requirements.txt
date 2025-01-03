@@ -1,0 +1,5 @@
+flatdict==4.0.1
+influx-line-protocol==0.1.5
+line-protocol-parser==1.1.1
+memoization==0.4.0
+oci==2.141.1

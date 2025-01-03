@@ -1,0 +1,6 @@
+[DEFAULT]
+user = ocid1.user.oc1..aaaaaaaa7cvadsadalnlih7wa
+fingerprint = 51:40:58:85:b4:ed:e7:9f:c2:f6:47:c5:7b:d6:4f:7b
+key_file = /script/oci_api_key.pem
+tenancy = ocid1.tenancy.oc1..aaaaaaaaiadsaddsaadaxu7dq
+region = eu-frankfurt-1
