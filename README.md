@@ -52,3 +52,30 @@ Execute the export with the command:
     # HELP BufferCacheHitRatio_count Telegraf collected metric
     # TYPE BufferCacheHitRatio_count untyped
     BufferCacheHitRatio_count{Oracle_Tags_CreatedBy="oracleidentitycloudservice/test.user@oracle.com",Oracle_Tags_CreatedOn="2024-05-21T12:52:24.647Z",dbInstanceId="379d3543-a719-4dd1dc5196b7",dbInstanceRole="PRIMARY",resourceId="ocid1.postgresqldbsystem.oc1.eu-frankfurt-1.amaaaaaawe6j4fqa6hvp7usdarm2n6pc4svdcu42sxa",resourceName="postgres-demo",resourceType="OCI_OPTIMIZED_STORAGE"} 1
+
+## Metrics enrichment
+
+If you need to add resources defined and freeform tags to the collected metrics, you will have to set `ENRICH_METRICS=TRUE` in the `Dockerfile`.
+
+**Note:** Only the following metrics namespaces are currently supported:
+
+- oci_apigateway
+- oci_bastion
+- oci_blockstore
+- oci_compute_infrastructure_health
+- oci_compute_instance_health
+- oci_computeagent
+- oci_compute
+- oci_filestorage
+- oci_internet_gateway
+- oci_lbaas
+- oci_logging
+- oci_managementagent
+- oci_objectstorage
+- oci_oke
+- oci_postgresql
+- oci_secrets
+- oci_service_connector_hub
+- oci_service_gateway
+- oci_vcn
+- oci_vcnip

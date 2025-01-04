@@ -46,6 +46,7 @@ RUN cd /script && \
     apk del build-base 
 
 ENV OCI_CONFIG_PATH=/script/oci_config
+ENV ENRICH_METRICS=FALSE
 
 COPY telegraf.conf /etc/telegraf/telegraf.conf
 COPY *.conf /etc/telegraf/telegraf.d/

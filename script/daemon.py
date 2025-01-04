@@ -29,8 +29,10 @@ root.addHandler(handler)
 logger =logging.getLogger(__name__)
 
 clients = {}
+ENRICH_METRICS = os.environ.get("ENRICH_METRICS", "false").lower()  == "true"
 TAG_DISCOVER_WORKERS = int(os.environ.get("TAG_DISCOVER_WORKERS", "10"))
 OCI_CONFIG_PATH = os.environ.get("OCI_CONFIG_PATH", None)
+
 
 
 @cached(max_size=128, algorithm=CachingAlgorithmFlag.LFU)  # the cache overwrites items using the LFU algorithm
@@ -77,8 +79,7 @@ def metric_to_stdout(fn):
                     metric.add_tag(k, v)
 
                 logger.debug(f"Constructed metric: {metric}")
-                print(metric)
-                sys.stdout.flush()
+                print(metric, file=sys.stdout, flush=True)
 
 
 def fetch_resource(oci_metric):
@@ -121,8 +122,7 @@ def main(oci_config, oci_signer):
             try:
                 
                 data_from_telegraf = parse_line(entry)
-                # if 'value' not in data_from_telegraf['fields']:
-                #     continue
+
                 data_to_load = data_from_telegraf['fields']['value'].replace(r'\"', '"')
                 oci_metric_json = json.loads(data_to_load)
             
@@ -137,32 +137,65 @@ def main(oci_config, oci_signer):
             except Exception as e:
                 logger.error(f"Couldn't process the input {data_from_telegraf}: {traceback.format_exc()}")
 
+def main_no_tags():
+    logger.info("Entering the main loop without metric tag enrichment.")
+    while True:
+        for entry in sys.stdin:
+            try:
+                data_from_telegraf = parse_line(entry)
+                data_to_load = data_from_telegraf['fields']['value'].replace(r'\"', '"')
+                oci_metric_json = json.loads(data_to_load)
+
+                for datapoint in oci_metric_json.get("datapoints"):
+
+                    metric = Metric(oci_metric_json["name"])
+                    metric.with_timestamp(datapoint["timestamp"]*pow(10, 6))
+                    
+                    for k, v in datapoint.items():
+                        if k != 'timestamp':
+                            metric.add_value(k, v)
+                    
+                    for k, v in oci_metric_json["metadata"].items():
+                        metric.add_tag(k, v)
+                    
+                    for k, v in oci_metric_json["dimensions"].items():
+                        metric.add_tag(k, v)
+
+                    logger.debug(f"Constructed metric: {metric}")
+                    print(metric, file=sys.stdout, flush=True)
+                    
+            
+            except Exception as e:
+                logger.error(f"Couldn't process the input {data_from_telegraf}: {traceback.format_exc()}")
 
 
 if __name__ == "__main__":
 
-    auth = False
-    try:
-        from oci.config import from_file
-        if OCI_CONFIG_PATH:
-            logger.info(f"OCI CONFIG PATH: {OCI_CONFIG_PATH}")
-            config = from_file(file_location=OCI_CONFIG_PATH, profile_name="DEFAULT")
-        else:
-            config = from_file(profile_name="DEFAULT")
-
-        from oci import Signer
-        signer = Signer.from_config(config)
-        auth = True
-    except:
-        logger.error('Failed to load profile and signer from the OCI config file.')
-
-    if not auth:
+    if ENRICH_METRICS:
+        auth = False
         try:
-            from oci.auth.signers import InstancePrincipalsSecurityTokenSigner
-            config = {}
-            signer = InstancePrincipalsSecurityTokenSigner()
-        except:
-            logger.error("Failed to load instance principal signer. No supported signer found.")
-            sys.exit(1)    
+            from oci.config import from_file
+            if OCI_CONFIG_PATH:
+                logger.info(f"OCI CONFIG PATH: {OCI_CONFIG_PATH}")
+                config = from_file(file_location=OCI_CONFIG_PATH, profile_name="DEFAULT")
+            else:
+                config = from_file(profile_name="DEFAULT")
 
-    main(config, signer)
+            from oci import Signer
+            signer = Signer.from_config(config)
+            auth = True
+        except:
+            logger.error('Failed to load profile and signer from the OCI config file.')
+
+        if not auth:
+            try:
+                from oci.auth.signers import InstancePrincipalsSecurityTokenSigner
+                config = {}
+                signer = InstancePrincipalsSecurityTokenSigner()
+            except:
+                logger.error("Failed to load instance principal signer. No supported signer found.")
+                sys.exit(1)
+        
+        main(config, signer)
+    else:
+        main_no_tags()
